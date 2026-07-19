@@ -1,0 +1,158 @@
+using System;
+using System.Collections.Generic;
+
+namespace ParqueDiversiones
+{
+    // Clase que representa a una persona
+    public class Persona
+    {
+        public string Nombre { get; set; }
+        public int Edad { get; set; }
+
+        public Persona(string nombre, int edad)
+        {
+            Nombre = nombre;
+            Edad = edad;
+        }
+
+        public override string ToString()
+        {
+            return $"{Nombre} ({Edad} años)";
+        }
+    }
+
+    // Clase principal que gestiona la cola
+    public class SistemaColaAtraccion
+    {
+        private Queue<Persona> colaEspera = new Queue<Persona>();
+        private const int CAPACIDAD = 30;
+        private List<Persona> asientosOcupados = new List<Persona>();
+
+        public void AgregarPersona(string nombre, int edad)
+        {
+            if (colaEspera.Count + asientosOcupados.Count >= CAPACIDAD)
+            {
+                Console.WriteLine("¡La atracción está llena! Espere a que se liberen asientos.");
+                return;
+            }
+
+            Persona p = new Persona(nombre, edad);
+            colaEspera.Enqueue(p);
+            Console.WriteLine($"✅ {p} agregado a la cola.");
+        }
+
+        public void SubirAtraccion()
+        {
+            if (colaEspera.Count == 0)
+            {
+                Console.WriteLine("No hay personas en la cola.");
+                return;
+            }
+
+            Persona p = colaEspera.Dequeue();
+            asientosOcupados.Add(p);
+            Console.WriteLine($"🎢 {p} subió a la atracción.");
+        }
+
+        public void VerCola()
+        {
+            Console.WriteLine("\n--- Cola de Espera ---");
+            if (colaEspera.Count == 0)
+            {
+                Console.WriteLine("La cola está vacía.");
+                return;
+            }
+
+            int i = 1;
+            foreach (var p in colaEspera)
+            {
+                Console.WriteLine($"{i}. {p}");
+                i++;
+            }
+        }
+
+        public void VerAsientos()
+        {
+            Console.WriteLine("\n--- Asientos Ocupados ---");
+            if (asientosOcupados.Count == 0)
+            {
+                Console.WriteLine("No hay asientos ocupados.");
+                return;
+            }
+
+            for (int i = 0; i < asientosOcupados.Count; i++)
+            {
+                Console.WriteLine($"Asiento {i + 1}: {asientosOcupados[i]}");
+            }
+        }
+
+        public void Reiniciar()
+        {
+            colaEspera.Clear();
+            asientosOcupados.Clear();
+            Console.WriteLine("Sistema reiniciado.");
+        }
+    }
+
+    // Programa principal
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            SistemaColaAtraccion sistema = new SistemaColaAtraccion();
+            bool salir = false;
+
+            Console.WriteLine("=== Sistema de Cola para Atracción - Parque de Diversiones ===\n");
+
+            while (!salir)
+            {
+                Console.WriteLine("\nMenú:");
+                Console.WriteLine("1. Agregar persona a la cola");
+                Console.WriteLine("2. Subir a la atracción (dequeue)");
+                Console.WriteLine("3. Ver cola de espera");
+                Console.WriteLine("4. Ver asientos ocupados");
+                Console.WriteLine("5. Reiniciar sistema");
+                Console.WriteLine("6. Salir");
+                Console.Write("Seleccione una opción: ");
+
+                string opcion = Console.ReadLine();
+
+                switch (opcion)
+                {
+                    case "1":
+                        Console.Write("Nombre: ");
+                        string nombre = Console.ReadLine();
+                        Console.Write("Edad: ");
+                        int edad = int.Parse(Console.ReadLine() ?? "0");
+                        sistema.AgregarPersona(nombre, edad);
+                        break;
+
+                    case "2":
+                        sistema.SubirAtraccion();
+                        break;
+
+                    case "3":
+                        sistema.VerCola();
+                        break;
+
+                    case "4":
+                        sistema.VerAsientos();
+                        break;
+
+                    case "5":
+                        sistema.Reiniciar();
+                        break;
+
+                    case "6":
+                        salir = true;
+                        Console.WriteLine("¡Gracias por usar el sistema!");
+                        break;
+
+                    default:
+                        Console.WriteLine("Opción inválida. Intente nuevamente.");
+                        break;
+                }
+            }
+        }
+    }
+}
