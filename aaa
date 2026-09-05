@@ -1,0 +1,318 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+
+namespace BibliotecaEstructurasDatos
+{
+    // Clase que representa un libro
+    public class Libro
+    {
+        public string ISBN { get; set; }
+        public string Titulo { get; set; }
+        public string Autor { get; set; }
+        public string Genero { get; set; }
+        public int Anio { get; set; }
+
+        public override string ToString()
+        {
+            return $"ISBN: {ISBN} | Título: {Titulo} | Autor: {Autor} | Género: {Genero} | Año: {Anio}";
+        }
+    }
+
+    class Program
+    {
+        // ========== ESTRUCTURAS DE DATOS ==========
+        // 1. Conjunto (HashSet) → garantiza ISBN únicos
+        static HashSet<string> isbnsUnicos = new HashSet<string>();
+
+        // 2. Diccionario principal → ISBN → Libro (Mapa)
+        static Dictionary<string, Libro> librosPorISBN = new Dictionary<string, Libro>();
+
+        // 3. Diccionario → Género → Lista de libros
+        static Dictionary<string, List<Libro>> librosPorGenero = new Dictionary<string, List<Libro>>();
+
+        // 4. Diccionario → Autor → Lista de libros
+        static Dictionary<string, List<Libro>> librosPorAutor = new Dictionary<string, List<Libro>>();
+
+        static void Main(string[] args)
+        {
+            // Cargar algunos libros de ejemplo
+            CargarDatosEjemplo();
+
+            bool salir = false;
+            while (!salir)
+            {
+                Console.Clear();
+                Console.WriteLine("==============================================");
+                Console.WriteLine("   SISTEMA DE REGISTRO DE LIBROS - BIBLIOTECA");
+                Console.WriteLine("   (Conjuntos + Mapas + Diccionarios)");
+                Console.WriteLine("==============================================");
+                Console.WriteLine("1. Registrar nuevo libro");
+                Console.WriteLine("2. Buscar libro por ISBN");
+                Console.WriteLine("3. Listar todos los libros");
+                Console.WriteLine("4. Listar libros por Género");
+                Console.WriteLine("5. Listar libros por Autor");
+                Console.WriteLine("6. Mostrar estadísticas");
+                Console.WriteLine("7. Salir");
+                Console.WriteLine("==============================================");
+                Console.Write("Seleccione una opción: ");
+
+                string opcion = Console.ReadLine();
+
+                switch (opcion)
+                {
+                    case "1":
+                        RegistrarLibro();
+                        break;
+                    case "2":
+                        BuscarPorISBN();
+                        break;
+                    case "3":
+                        ListarTodos();
+                        break;
+                    case "4":
+                        ListarPorGenero();
+                        break;
+                    case "5":
+                        ListarPorAutor();
+                        break;
+                    case "6":
+                        MostrarEstadisticas();
+                        break;
+                    case "7":
+                        salir = true;
+                        break;
+                    default:
+                        Console.WriteLine("Opción no válida.");
+                        Pausar();
+                        break;
+                }
+            }
+
+            Console.WriteLine("\n¡Gracias por usar el sistema!");
+        }
+
+        // ========== MÉTODOS PRINCIPALES ==========
+
+        static void RegistrarLibro()
+        {
+            Console.Clear();
+            Console.WriteLine("=== REGISTRAR NUEVO LIBRO ===\n");
+
+            Console.Write("ISBN: ");
+            string isbn = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrWhiteSpace(isbn))
+            {
+                Console.WriteLine("El ISBN no puede estar vacío.");
+                Pausar();
+                return;
+            }
+
+            // Validación con HashSet (conjunto)
+            if (isbnsUnicos.Contains(isbn))
+            {
+                Console.WriteLine("Error: Ya existe un libro con ese ISBN.");
+                Pausar();
+                return;
+            }
+
+            Console.Write("Título: ");
+            string titulo = Console.ReadLine()?.Trim();
+
+            Console.Write("Autor: ");
+            string autor = Console.ReadLine()?.Trim();
+
+            Console.Write("Género: ");
+            string genero = Console.ReadLine()?.Trim();
+
+            Console.Write("Año de publicación: ");
+            if (!int.TryParse(Console.ReadLine(), out int anio))
+            {
+                Console.WriteLine("Año inválido.");
+                Pausar();
+                return;
+            }
+
+            // Crear el libro
+            Libro nuevoLibro = new Libro
+            {
+                ISBN = isbn,
+                Titulo = titulo,
+                Autor = autor,
+                Genero = genero,
+                Anio = anio
+            };
+
+            // 1. Agregar al HashSet
+            isbnsUnicos.Add(isbn);
+
+            // 2. Agregar al diccionario principal
+            librosPorISBN.Add(isbn, nuevoLibro);
+
+            // 3. Agregar al diccionario por género
+            if (!librosPorGenero.ContainsKey(genero))
+                librosPorGenero[genero] = new List<Libro>();
+            librosPorGenero[genero].Add(nuevoLibro);
+
+            // 4. Agregar al diccionario por autor
+            if (!librosPorAutor.ContainsKey(autor))
+                librosPorAutor[autor] = new List<Libro>();
+            librosPorAutor[autor].Add(nuevoLibro);
+
+            Console.WriteLine("\n¡Libro registrado correctamente!");
+            Pausar();
+        }
+
+        static void BuscarPorISBN()
+        {
+            Console.Clear();
+            Console.WriteLine("=== BUSCAR LIBRO POR ISBN ===\n");
+            Console.Write("Ingrese el ISBN: ");
+            string isbn = Console.ReadLine()?.Trim();
+
+            // Búsqueda O(1) con Dictionary
+            if (librosPorISBN.TryGetValue(isbn, out Libro libro))
+            {
+                Console.WriteLine("\nLibro encontrado:");
+                Console.WriteLine(libro);
+            }
+            else
+            {
+                Console.WriteLine("No se encontró ningún libro con ese ISBN.");
+            }
+            Pausar();
+        }
+
+        static void ListarTodos()
+        {
+            Console.Clear();
+            Console.WriteLine("=== TODOS LOS LIBROS REGISTRADOS ===\n");
+
+            if (librosPorISBN.Count == 0)
+            {
+                Console.WriteLine("No hay libros registrados.");
+            }
+            else
+            {
+                foreach (var libro in librosPorISBN.Values)
+                {
+                    Console.WriteLine(libro);
+                    Console.WriteLine("------------------------------------------");
+                }
+            }
+            Pausar();
+        }
+
+        static void ListarPorGenero()
+        {
+            Console.Clear();
+            Console.WriteLine("=== LIBROS POR GÉNERO ===\n");
+            Console.Write("Ingrese el género: ");
+            string genero = Console.ReadLine()?.Trim();
+
+            if (librosPorGenero.TryGetValue(genero, out List<Libro> lista))
+            {
+                Console.WriteLine($"\nLibros del género '{genero}':\n");
+                foreach (var libro in lista)
+                {
+                    Console.WriteLine(libro);
+                    Console.WriteLine("------------------------------------------");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"No hay libros del género '{genero}'.");
+            }
+            Pausar();
+        }
+
+        static void ListarPorAutor()
+        {
+            Console.Clear();
+            Console.WriteLine("=== LIBROS POR AUTOR ===\n");
+            Console.Write("Ingrese el autor: ");
+            string autor = Console.ReadLine()?.Trim();
+
+            if (librosPorAutor.TryGetValue(autor, out List<Libro> lista))
+            {
+                Console.WriteLine($"\nLibros de '{autor}':\n");
+                foreach (var libro in lista)
+                {
+                    Console.WriteLine(libro);
+                    Console.WriteLine("------------------------------------------");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"No se encontraron libros del autor '{autor}'.");
+            }
+            Pausar();
+        }
+
+        static void MostrarEstadisticas()
+        {
+            Console.Clear();
+            Console.WriteLine("=== ESTADÍSTICAS DEL SISTEMA ===\n");
+
+            Console.WriteLine($"Total de libros registrados : {librosPorISBN.Count}");
+            Console.WriteLine($"Total de ISBN únicos        : {isbnsUnicos.Count}");
+            Console.WriteLine($"Total de géneros diferentes : {librosPorGenero.Count}");
+            Console.WriteLine($"Total de autores diferentes : {librosPorAutor.Count}");
+
+            Console.WriteLine("\n--- Libros por Género ---");
+            foreach (var item in librosPorGenero)
+            {
+                Console.WriteLine($"  {item.Key}: {item.Value.Count} libro(s)");
+            }
+
+            Console.WriteLine("\n--- Libros por Autor ---");
+            foreach (var item in librosPorAutor)
+            {
+                Console.WriteLine($"  {item.Key}: {item.Value.Count} libro(s)");
+            }
+
+            Pausar();
+        }
+
+        // ========== DATOS DE EJEMPLO ==========
+        static void CargarDatosEjemplo()
+        {
+            AgregarLibroEjemplo("978-84-376-0494-7", "Cien años de soledad", "Gabriel García Márquez", "Realismo mágico", 1967);
+            AgregarLibroEjemplo("978-84-204-6579-1", "Don Quijote de la Mancha", "Miguel de Cervantes", "Clásico", 1605);
+            AgregarLibroEjemplo("978-987-566-123-4", "Rayuela", "Julio Cortázar", "Ficción", 1963);
+            AgregarLibroEjemplo("978-84-670-1234-5", "La sombra del viento", "Carlos Ruiz Zafón", "Misterio", 2001);
+            AgregarLibroEjemplo("978-84-081-5678-9", "El amor en los tiempos del cólera", "Gabriel García Márquez", "Romance", 1985);
+        }
+
+        static void AgregarLibroEjemplo(string isbn, string titulo, string autor, string genero, int anio)
+        {
+            Libro libro = new Libro
+            {
+                ISBN = isbn,
+                Titulo = titulo,
+                Autor = autor,
+                Genero = genero,
+                Anio = anio
+            };
+
+            isbnsUnicos.Add(isbn);
+            librosPorISBN.Add(isbn, libro);
+
+            if (!librosPorGenero.ContainsKey(genero))
+                librosPorGenero[genero] = new List<Libro>();
+            librosPorGenero[genero].Add(libro);
+
+            if (!librosPorAutor.ContainsKey(autor))
+                librosPorAutor[autor] = new List<Libro>();
+            librosPorAutor[autor].Add(libro);
+        }
+
+        static void Pausar()
+        {
+            Console.WriteLine("\nPresione cualquier tecla para continuar...");
+            Console.ReadKey();
+        }
+    }
+}
