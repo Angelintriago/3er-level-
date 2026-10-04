@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""
+Guía de Prácticas N.° 4 - Encuentro de vuelos baratos
+Universidad Estatal Amazónica
+Estructura de datos: Grafo (dirigido ponderado)
+"""
+
+import networkx as nx
+import time
+from typing import List, Tuple, Optional, Dict
+
+# ============================================================
+# 1. BASE DE DATOS FICTICIA DE VUELOS
+# ============================================================
+VUELOS = [
+    ("UIO", "GYE", "Latam", 85, 55),
+    ("UIO", "CUE", "Avianca", 95, 50),
+    ("UIO", "MDE", "Avianca", 180, 90),
+    ("UIO", "BOG", "Latam", 210, 110),
+    ("UIO", "LIM", "Latam", 250, 150),
+    ("GYE", "UIO", "Latam", 90, 55),
+    ("GYE", "CUE", "TAME", 70, 40),
+    ("GYE", "MDE", "Avianca", 160, 85),
+    ("GYE", "BOG", "Latam", 190, 100),
+    ("GYE", "LIM", "Latam", 220, 140),
+    ("CUE", "UIO", "Avianca", 100, 50),
+    ("CUE", "GYE", "TAME", 75, 40),
+    ("CUE", "LIM", "Latam", 280, 160),
+    ("MDE", "UIO", "Avianca", 175, 90),
+    ("MDE", "BOG", "Avianca", 60, 45),
+    ("MDE", "LIM", "Latam", 200, 130),
+    ("MDE", "SCL", "Latam", 320, 280),
+    ("BOG", "UIO", "Latam", 205, 110),
+    ("BOG", "GYE", "Latam", 195, 100),
+    ("BOG", "MDE", "Avianca", 55, 45),
+    ("BOG", "LIM", "Latam", 150, 120),
+    ("BOG", "SCL", "Latam", 280, 260),
+    ("BOG", "MIA", "Avianca", 350, 210),
+    ("LIM", "UIO", "Latam", 245, 150),
+    ("LIM", "GYE", "Latam", 230, 140),
+    ("LIM", "BOG", "Latam", 155, 120),
+    ("LIM", "SCL", "Latam", 180, 200),
+    ("LIM", "MIA", "Latam", 380, 360),
+    ("SCL", "LIM", "Latam", 175, 200),
+    ("SCL", "BOG", "Latam", 290, 260),
+    ("SCL", "MIA", "Latam", 420, 480),
+    ("MIA", "BOG", "Avianca", 340, 210),
+    ("MIA", "LIM", "Latam", 370, 360),
+    ("MIA", "SCL", "Latam", 410, 480),
+]
+
+AEROPUERTOS = {
+    "UIO": "Quito (Mariscal Sucre)",
+    "GYE": "Guayaquil (José Joaquín de Olmedo)",
+    "CUE": "Cuenca (Mariscal Lamar)",
+    "MDE": "Medellín (José María Córdova)",
+    "BOG": "Bogotá (El Dorado)",
+    "LIM": "Lima (Jorge Chávez)",
+    "SCL": "Santiago (Arturo Merino Benítez)",
+    "MIA": "Miami (Miami International)",
+}
+
+
+def construir_grafo(vuelos: List[Tuple]) -> nx.DiGraph:
+    G = nx.DiGraph()
+    for origen, destino, aerolinea, precio, duracion in vuelos:
+        if G.has_edge(origen, destino):
+            if precio < G[origen][destino]["precio"]:
+                G[origen][destino]["precio"] = precio
+                G[origen][destino]["aerolinea"] = aerolinea
+                G[origen][destino]["duracion"] = duracion
+        else:
+            G.add_edge(origen, destino, precio=precio, aerolinea=aerolinea, duracion=duracion)
+    return G
+
+
+def reportar_estructura(G: nx.DiGraph) -> None:
+    print("\n" + "=" * 70)
+    print("REPORTERÍA DE LA ESTRUCTURA DE DATOS (GRAFO)")
+    print("=" * 70)
+    print(f"\n▶ Número de nodos (aeropuertos): {G.number_of_nodes()}")
+    print(f"▶ Número de aristas (vuelos):    {G.number_of_edges()}")
+    print("\n▶ Lista de nodos (aeropuertos):")
+    for nodo in sorted(G.nodes()):
+        print(f"   • {nodo} → {AEROPUERTOS.get(nodo, 'Desconocido')}")
+    print("\n▶ Lista de aristas (vuelos) ordenadas por precio:")
+    aristas = sorted(G.edges(data=True), key=lambda x: x[2]["precio"])
+    for origen, destino, datos in aristas:
+        print(f"   • {origen} → {destino} | ${datos['precio']:3d} USD | {datos['aerolinea']:8s} | {datos['duracion']:3d} min")
+    print("\n▶ Grado de salida (vuelos que parten) por aeropuerto:")
+    for nodo in sorted(G.nodes()):
+        print(f"   • {nodo}: {G.out_degree(nodo)} vuelos")
+    print("\n▶ Grado de entrada (vuelos que llegan) por aeropuerto:")
+    for nodo in sorted(G.nodes()):
+        print(f"   • {nodo}: {G.in_degree(nodo)} vuelos")
+
+
+def consultar_vuelos_desde(G: nx.DiGraph, origen: str) -> None:
+    print(f"\n▶ Vuelos que salen de {origen} ({AEROPUERTOS.get(origen, '')}):")
+    if origen not in G:
+        print("   Aeropuerto no encontrado en el grafo.")
+        return
+    for destino in G.successors(origen):
+        datos = G[origen][destino]
+        print(f"   → {destino} ({AEROPUERTOS.get(destino, '')}) | ${datos['precio']} USD | {datos['aerolinea']} | {datos['duracion']} min")
+
+
+def encontrar_vuelo_mas_barato(G: nx.DiGraph, origen: str, destino: str):
+    try:
+        ruta = nx.dijkstra_path(G, origen, destino, weight="precio")
+        costo = nx.dijkstra_path_length(G, origen, destino, weight="precio")
+        return ruta, costo
+    except (nx.NetworkXNoPath, nx.NodeNotFound):
+        return None
+
+
+def mostrar_ruta(ruta: List[str], costo: float, G: nx.DiGraph) -> None:
+    print(f"\n✅ RUTA MÁS BARATA ENCONTRADA (Costo total: ${costo:.0f} USD)")
+    print("-" * 60)
+    for i in range(len(ruta) - 1):
+        o, d = ruta[i], ruta[i + 1]
+        datos = G[o][d]
+        print(f"  {i+1}. {o} → {d}  |  ${datos['precio']} USD  |  {datos['aerolinea']}  |  {datos['duracion']} min")
+        print(f"     {AEROPUERTOS.get(o, o)}  →  {AEROPUERTOS.get(d, d)}")
+    print("-" * 60)
+    print(f"  Total de escalas: {len(ruta) - 2}")
+    print(f"  Aeropuertos visitados: {' → '.join(ruta)}")
+
+
+def medir_tiempos(G: nx.DiGraph, origen: str, destino: str, repeticiones: int = 1000) -> Dict:
+    tiempos = []
+    for _ in range(repeticiones):
+        inicio = time.perf_counter()
+        encontrar_vuelo_mas_barato(G, origen, destino)
+        fin = time.perf_counter()
+        tiempos.append(fin - inicio)
+    return {
+        "promedio_ms": (sum(tiempos) / len(tiempos)) * 1000,
+        "minimo_ms": min(tiempos) * 1000,
+        "maximo_ms": max(tiempos) * 1000,
+        "repeticiones": repeticiones,
+    }
+
+
+def main():
+    print("=" * 70)
+    print("  SISTEMA DE BÚSQUEDA DE VUELOS BARATOS")
+    print("  Estructura de datos: Grafo Dirigido Ponderado")
+    print("  Algoritmo: Dijkstra (camino de menor costo)")
+    print("=" * 70)
+
+    t0 = time.perf_counter()
+    G = construir_grafo(VUELOS)
+    t1 = time.perf_counter()
+    print(f"\n⏱ Tiempo de construcción del grafo: {(t1 - t0) * 1000:.4f} ms")
+
+    reportar_estructura(G)
+    consultar_vuelos_desde(G, "UIO")
+    consultar_vuelos_desde(G, "BOG")
+
+    consultas = [("UIO", "MIA"), ("GYE", "SCL"), ("CUE", "MIA"), ("UIO", "SCL"), ("MDE", "MIA")]
+    print("\n" + "=" * 70)
+    print("BÚSQUEDAS DE VUELOS MÁS BARATOS")
+    print("=" * 70)
+
+    for origen, destino in consultas:
+        print(f"\n🔍 Buscando: {origen} → {destino}")
+        resultado = encontrar_vuelo_mas_barato(G, origen, destino)
+        if resultado:
+            ruta, costo = resultado
+            mostrar_ruta(ruta, costo, G)
+        else:
+            print(f"   ❌ No existe ruta entre {origen} y {destino}")
+
+    print("\n" + "=" * 70)
+    print("ANÁLISIS DE TIEMPO DE EJECUCIÓN")
+    print("=" * 70)
+    metricas = medir_tiempos(G, "UIO", "MIA", repeticiones=5000)
+    print(f"  Origen → Destino: UIO → MIA")
+    print(f"  Repeticiones:     {metricas['repeticiones']}")
+    print(f"  Tiempo promedio:  {metricas['promedio_ms']:.6f} ms")
+    print(f"  Tiempo mínimo:    {metricas['minimo_ms']:.6f} ms")
+    print(f"  Tiempo máximo:    {metricas['maximo_ms']:.6f} ms")
+
+    print("\n" + "=" * 70)
+    print("RESUMEN DE VENTAJAS Y DESVENTAJAS DEL GRAFO")
+    print("=" * 70)
+    print("""
+  VENTAJAS:
+  • Representación natural de rutas y conexiones entre aeropuertos.
+  • Algoritmos eficientes (Dijkstra) para encontrar caminos de menor costo.
+  • Fácil de consultar vecinos (vuelos directos) y calcular métricas.
+  • Escalable: agregar nuevos vuelos o aeropuertos es trivial.
+  • Permite modelar restricciones (direccionalidad, pesos múltiples).
+
+  DESVENTAJAS:
+  • Con grafos muy densos el consumo de memoria crece.
+  • Dijkstra asume pesos no negativos (válido para precios).
+  • No optimiza simultáneamente precio + duración (se necesitaría multiobjetivo).
+  • La visualización gráfica se vuelve compleja con muchos nodos.
+    """)
+    print("\n✅ Programa finalizado correctamente.")
+
+
+if __name__ == "__main__":
+    main()
